@@ -30,6 +30,9 @@ $PluginInfo['Installer'] = array(
   'Hidden' => false
 );
 
+//
+define('INSTALLER_REMOVE', 'undefined');
+
 class Installer extends Gdn_Plugin
 {
     /** @var array configuration */
@@ -61,11 +64,28 @@ class Installer extends Gdn_Plugin
         $this->installApplications();
         // Install Plugins
         $this->installPlugins();
+        // Install Configuration
+        $this->installConfiguration();
+
+    }
+
+    /**
+     * Install configuration
+     */
+    private function installConfiguration()
+    {
+        $Configuration = $this->ArrayToDotNotation($this->config);
+
+        foreach ($Configuration as $name => $value) {
+            if ($value === INSTALLER_REMOVE) {
+                Gdn::config()->remove($name);
+                unset($Configuration[$name]);
+            }
+        }
 
         // For each array entry save it into the configuration file
-        foreach ($this->ArrayToDotNotation($this->config) as $key => $value) {
-            Gdn::config()->SaveToConfig($key, $value);
-        }
+        Gdn::config()
+          ->SaveToConfig($Configuration);
     }
 
     /**
@@ -83,7 +103,7 @@ class Installer extends Gdn_Plugin
         $enabledApplications = $ApplicationManager->EnabledApplications();
 
         foreach ($this->config['EnabledApplications'] as $applicationName => $enabled) {
-            if (false === $enabled) {
+            if (INSTALLER_REMOVE === $enabled) {
                 if (array_key_exists($applicationName, $enabledApplications)) {
                     $ApplicationManager->DisableApplication($applicationName);
                 }
@@ -92,9 +112,8 @@ class Installer extends Gdn_Plugin
                     $ApplicationManager->EnableApplication($applicationName, $Validation);
                 }
             }
-            unset($this->config['EnabledApplications'][$applicationName]);
         }
-
+        unset($this->config['EnabledApplications']);
     }
 
 
@@ -113,7 +132,7 @@ class Installer extends Gdn_Plugin
         $enabledPlugins = $pluginManager->EnabledPlugins();
 
         foreach ($this->config['EnabledPlugins'] as $pluginName => $enabled) {
-            if (false === $enabled) {
+            if (INSTALLER_REMOVE === $enabled) {
                 if (array_key_exists($pluginName, $enabledPlugins)) {
                     $pluginManager->DisablePlugin($pluginName);
                 }
@@ -122,9 +141,8 @@ class Installer extends Gdn_Plugin
                     $pluginManager->EnablePlugin($pluginName, $Validation);
                 }
             }
-            unset($this->config['EnabledApplications'][$pluginName]);
         }
-
+        unset($this->config['EnabledApplications']);
     }
 
     private function ArrayToDotNotation($array)
@@ -132,10 +150,6 @@ class Installer extends Gdn_Plugin
         $RecursiveIIterator = new RecursiveIteratorIterator(new RecursiveArrayIterator($array));
         $strings = array();
         foreach ($RecursiveIIterator as $leafValue) {
-            if (empty($leafValue)) {
-                continue;
-            }
-
             $keys = array();
             foreach (range(0, $RecursiveIIterator->getDepth()) as $depth) {
                 $keys[] = $RecursiveIIterator->getSubIterator($depth)->key();
