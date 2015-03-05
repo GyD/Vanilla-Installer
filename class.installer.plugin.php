@@ -33,7 +33,7 @@ $PluginInfo['Installer'] = array(
 //
 define('INSTALLER_REMOVE', 'undefined');
 
-class Installer extends Gdn_Plugin
+class InstallerPlugin extends Gdn_Plugin
 {
     /** @var array configuration */
     protected $config = array();
